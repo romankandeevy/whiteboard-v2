@@ -1,10 +1,14 @@
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react'
 import { supabase } from './lib/supabase'
 
-export default function Auth() {
-  const [mode, setMode] = useState<'sign-in' | 'sign-up'>('sign-in')
+interface AuthProps {
+  mode: 'sign-in' | 'sign-up'
+}
+
+export default function Auth({ mode }: AuthProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -226,13 +230,9 @@ export default function Auth() {
                   transition={{ delay: 0.5 }}
                 >
                   {mode === 'sign-in' ? "Don't have an account? " : 'Already have an account? '}
-                  <button
-                    type="button"
-                    className="auth-switch"
-                    onClick={() => setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in')}
-                  >
+                  <Link className="auth-switch" to={mode === 'sign-in' ? '/sign-up' : '/sign-in'}>
                     {mode === 'sign-in' ? 'Sign up' : 'Sign in'}
-                  </button>
+                  </Link>
                 </motion.p>
               </form>
             </div>

@@ -2,15 +2,13 @@ import { lazy, Suspense } from 'react'
 import '@excalidraw/excalidraw/index.css'
 import './App.css'
 
-const Excalidraw = lazy(() =>
-  import('@excalidraw/excalidraw').then((module) => ({ default: module.Excalidraw })),
-)
+const Board = lazy(() => import('./Board'))
 
 function App() {
   return (
     <div className="board">
       <Suspense fallback={null}>
-        <Excalidraw />
+        <Board />
       </Suspense>
     </div>
   )

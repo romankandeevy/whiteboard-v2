@@ -2,3 +2,28 @@
   position: fixed;
   inset: 0;
 }
+
+.board .excalidraw {
+  --color-primary: #0d9488;
+  --color-primary-darker: #0f766e;
+  --color-primary-darkest: #115e59;
+  --color-primary-light: #ccfbf1;
+  --color-primary-light-darker: #99f6e4;
+  --color-primary-hover: #0f9c8f;
+  --color-selection: #0d9488;
+  --border-radius-lg: 3px;
+  --border-radius-md: 2px;
+  --shadow-island: 0px 1px 2px rgba(15, 23, 23, 0.08), 0px 1px 1px rgba(15, 23, 23, 0.04);
+  --ui-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.board .excalidraw.theme--dark {
+  --color-primary: #2dd4bf;
+  --color-primary-darker: #5eead4;
+  --color-primary-darkest: #99f6e4;
+  --color-primary-light: #134e4a;
+  --color-primary-light-darker: #115e59;
+  --color-primary-hover: #34d8c3;
+  --color-selection: #2dd4bf;
+  --shadow-island: 0px 0px 0px 1px rgba(255, 255, 255, 0.06), 0px 2px 6px rgba(0, 0, 0, 0.5);
+}

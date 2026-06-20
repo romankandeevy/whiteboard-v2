@@ -14,7 +14,7 @@ import type {
   ExcalidrawInitialDataState,
 } from '@excalidraw/excalidraw/types'
 import type { OrderedExcalidrawElement } from '@excalidraw/excalidraw/element/types'
-import { getBoard, saveBoard } from './lib/boards'
+import { getBoard, saveBoard, touchLastOpened } from './lib/boards'
 
 const DOT_GRID_KEY = 'whiteboard:dotGrid'
 const DOT_GAP = 24
@@ -41,6 +41,7 @@ export default function Board({ boardId, onBack }: BoardProps) {
       if (bg && bg !== 'transparent') realBackgroundRef.current = bg
       setInitialData(data)
     })
+    touchLastOpened(boardId).catch(() => {})
     return () => {
       cancelled = true
     }

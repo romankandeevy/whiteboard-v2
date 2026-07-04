@@ -45,6 +45,14 @@ export async function saveBoard(id: string, data: ExcalidrawInitialDataState): P
   if (error) throw error
 }
 
+export async function renameBoard(id: string, name: string): Promise<void> {
+  const { error } = await supabase
+    .from('boards')
+    .update({ name, updated_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) throw error
+}
+
 export async function deleteBoard(id: string): Promise<void> {
   const { error } = await supabase.from('boards').delete().eq('id', id)
   if (error) throw error

@@ -1,244 +1,303 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
-import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Mail, Lock, Eye, EyeOff, ArrowRight, ArrowLeft } from 'lucide-react'
 import { supabase } from './lib/supabase'
+import { requestSignupCode, verifySignupCode, signInWithGoogle, authMessage } from './lib/auth'
+import CodeInput from './CodeInput'
 
 interface AuthProps {
   mode: 'sign-in' | 'sign-up'
 }
 
+const RESEND_COOLDOWN = 45
+
 export default function Auth({ mode }: AuthProps) {
+  const [step, setStep] = useState<'credentials' | 'code'>('credentials')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [focusedInput, setFocusedInput] = useState<'email' | 'password' | null>(null)
+  const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
+  const [resendIn, setResendIn] = useState(0)
 
-  const mouseX = useMotionValue(0)
-  const mouseY = useMotionValue(0)
-  const rotateX = useTransform(mouseY, [-300, 300], [8, -8])
-  const rotateY = useTransform(mouseX, [-300, 300], [-8, 8])
+  useEffect(() => {
+    if (resendIn <= 0) return
+    const t = setTimeout(() => setResendIn((s) => s - 1), 1000)
+    return () => clearTimeout(t)
+  }, [resendIn])
 
-  function handleMouseMove(e: React.MouseEvent) {
-    const rect = e.currentTarget.getBoundingClientRect()
-    mouseX.set(e.clientX - rect.left - rect.width / 2)
-    mouseY.set(e.clientY - rect.top - rect.height / 2)
+  async function handleGoogle() {
+    setError(null)
+    setGoogleLoading(true)
+    try {
+      await signInWithGoogle()
+    } catch {
+      setError('Couldn’t start Google sign-in. Make sure the provider is enabled in Supabase.')
+      setGoogleLoading(false)
+    }
   }
 
-  function handleMouseLeave() {
-    mouseX.set(0)
-    mouseY.set(0)
-  }
-
-  async function handleSubmit(e: FormEvent) {
+  async function handleCredentials(e: FormEvent) {
     e.preventDefault()
     setError(null)
-    setNotice(null)
     setLoading(true)
-    const { error } =
-      mode === 'sign-in'
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password })
-    setLoading(false)
-    if (error) {
-      setError(error.message)
+
+    if (mode === 'sign-in') {
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+      if (!signInError) return // session change navigates away
+      const unconfirmed =
+        (signInError as { code?: string }).code === 'email_not_confirmed' ||
+        /not confirmed/i.test(signInError.message)
+      if (unconfirmed) {
+        const res = await requestSignupCode(email, password)
+        setLoading(false)
+        if (res.ok) {
+          setStep('code')
+          setResendIn(RESEND_COOLDOWN)
+        } else {
+          setError(authMessage(res.code))
+        }
+        return
+      }
+      setLoading(false)
+      setError(/invalid login/i.test(signInError.message) ? 'Wrong email or password.' : signInError.message)
       return
     }
-    if (mode === 'sign-up') {
-      setNotice('Check your email to confirm your account.')
+
+    const res = await requestSignupCode(email, password)
+    setLoading(false)
+    if (res.ok) {
+      setCode('')
+      setStep('code')
+      setResendIn(RESEND_COOLDOWN)
+    } else {
+      setError(authMessage(res.code))
+    }
+  }
+
+  async function handleVerify(value: string) {
+    setError(null)
+    setLoading(true)
+    const res = await verifySignupCode(email, value)
+    if (!res.ok) {
+      setLoading(false)
+      setCode('')
+      setError(authMessage(res.code))
+      return
+    }
+    // Email confirmed — sign in with the credentials we already have.
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+    setLoading(false)
+    if (signInError) setError('Verified! Please sign in with your password.')
+    // On success the session listener redirects.
+  }
+
+  async function handleResend() {
+    if (resendIn > 0) return
+    setError(null)
+    const res = await requestSignupCode(email, password)
+    if (res.ok) {
+      setResendIn(RESEND_COOLDOWN)
+    } else {
+      setError(authMessage(res.code))
     }
   }
 
   return (
-    <div className="auth-screen">
-      <div className="auth-bg-gradient" />
-      <div className="auth-bg-noise" />
-      <div className="auth-bg-glow auth-bg-glow-top" />
-      <motion.div
-        className="auth-bg-glow auth-bg-glow-top-soft"
-        animate={{ opacity: [0.15, 0.3, 0.15], scale: [0.98, 1.02, 0.98] }}
-        transition={{ duration: 8, repeat: Infinity, repeatType: 'mirror' }}
-      />
-      <motion.div
-        className="auth-bg-glow auth-bg-glow-bottom"
-        animate={{ opacity: [0.3, 0.5, 0.3], scale: [1, 1.1, 1] }}
-        transition={{ duration: 6, repeat: Infinity, repeatType: 'mirror', delay: 1 }}
-      />
+    <div className="auth">
+      <div className="auth-grid" aria-hidden="true" />
+      <div className="auth-glow" aria-hidden="true" />
 
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        className="auth-panel"
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        className="auth-card-wrap"
-        style={{ perspective: 1500 }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       >
-        <motion.div
-          className="auth-card-tilt"
-          style={{ rotateX, rotateY }}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
-        >
-          <div className="auth-card-group">
-            <div className="auth-beams">
-              <motion.div
-                className="auth-beam auth-beam-top"
-                animate={{ left: ['-50%', '100%'], opacity: [0.3, 0.7, 0.3] }}
-                transition={{
-                  left: { duration: 2.5, ease: 'easeInOut', repeat: Infinity, repeatDelay: 1 },
-                  opacity: { duration: 1.2, repeat: Infinity, repeatType: 'mirror' },
-                }}
-              />
-              <motion.div
-                className="auth-beam auth-beam-right"
-                animate={{ top: ['-50%', '100%'], opacity: [0.3, 0.7, 0.3] }}
-                transition={{
-                  top: { duration: 2.5, ease: 'easeInOut', repeat: Infinity, repeatDelay: 1, delay: 0.6 },
-                  opacity: { duration: 1.2, repeat: Infinity, repeatType: 'mirror', delay: 0.6 },
-                }}
-              />
-              <motion.div
-                className="auth-beam auth-beam-bottom"
-                animate={{ right: ['-50%', '100%'], opacity: [0.3, 0.7, 0.3] }}
-                transition={{
-                  right: { duration: 2.5, ease: 'easeInOut', repeat: Infinity, repeatDelay: 1, delay: 1.2 },
-                  opacity: { duration: 1.2, repeat: Infinity, repeatType: 'mirror', delay: 1.2 },
-                }}
-              />
-              <motion.div
-                className="auth-beam auth-beam-left"
-                animate={{ bottom: ['-50%', '100%'], opacity: [0.3, 0.7, 0.3] }}
-                transition={{
-                  bottom: { duration: 2.5, ease: 'easeInOut', repeat: Infinity, repeatDelay: 1, delay: 1.8 },
-                  opacity: { duration: 1.2, repeat: Infinity, repeatType: 'mirror', delay: 1.8 },
-                }}
-              />
-            </div>
+        <div className="auth-brand">
+          <span className="auth-mark">B</span>
+          <span className="auth-wordmark">Board</span>
+        </div>
 
-            <div className="auth-card">
-              <div className="auth-card-pattern" />
+        <div className="auth-card">
+          <AnimatePresence mode="wait" initial={false}>
+            {step === 'credentials' ? (
+              <motion.div
+                key="credentials"
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -8 }}
+                transition={{ duration: 0.25 }}
+              >
+                <h1 className="auth-title">
+                  {mode === 'sign-in' ? 'Welcome back' : 'Create your account'}
+                </h1>
+                <p className="auth-sub">
+                  {mode === 'sign-in'
+                    ? 'Sign in to open your boards.'
+                    : 'Start sketching in seconds — no clutter.'}
+                </p>
 
-              <div className="auth-card-header">
-                <motion.div
-                  initial={{ scale: 0.5, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: 'spring', duration: 0.8 }}
-                  className="auth-logo"
+                <button
+                  type="button"
+                  className="auth-google"
+                  onClick={handleGoogle}
+                  disabled={googleLoading}
                 >
-                  <span>B</span>
-                </motion.div>
-                <motion.h1
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="auth-heading"
-                >
-                  {mode === 'sign-in' ? 'Welcome back' : 'Create an account'}
-                </motion.h1>
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                  className="auth-subheading"
-                >
-                  {mode === 'sign-in' ? 'Sign in to continue to Board' : 'Sign up to start on Board'}
-                </motion.p>
-              </div>
+                  <GoogleIcon />
+                  {googleLoading ? 'Connecting…' : 'Continue with Google'}
+                </button>
 
-              <form onSubmit={handleSubmit} className="auth-form">
-                <div
-                  className={`auth-field ${focusedInput === 'email' ? 'is-focused' : ''}`}
-                >
-                  <Mail className="auth-field-icon" />
-                  <input
-                    type="email"
-                    placeholder="Email address"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    onFocus={() => setFocusedInput('email')}
-                    onBlur={() => setFocusedInput(null)}
-                    autoComplete="email"
-                    required
-                  />
+                <div className="auth-divider">
+                  <span>or with email</span>
                 </div>
 
-                <div
-                  className={`auth-field ${focusedInput === 'password' ? 'is-focused' : ''}`}
-                >
-                  <Lock className="auth-field-icon" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    onFocus={() => setFocusedInput('password')}
-                    onBlur={() => setFocusedInput(null)}
-                    autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
-                    minLength={6}
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="auth-field-toggle"
-                    onClick={() => setShowPassword((v) => !v)}
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <Eye /> : <EyeOff />}
-                  </button>
-                </div>
+                <form onSubmit={handleCredentials} className="auth-form">
+                  <label className="auth-field">
+                    <Mail className="auth-field-icon" />
+                    <input
+                      type="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      autoComplete="email"
+                      required
+                    />
+                  </label>
 
-                {error && <p className="auth-error">{error}</p>}
-                {notice && <p className="auth-notice">{notice}</p>}
+                  <label className="auth-field">
+                    <Lock className="auth-field-icon" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'}
+                      minLength={6}
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="auth-field-toggle"
+                      onClick={() => setShowPassword((v) => !v)}
+                      tabIndex={-1}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <Eye /> : <EyeOff />}
+                    </button>
+                  </label>
 
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  type="submit"
-                  disabled={loading}
-                  className="auth-submit"
-                >
-                  <AnimatePresence mode="wait">
+                  {error && <p className="auth-error">{error}</p>}
+
+                  <button type="submit" className="auth-submit" disabled={loading}>
                     {loading ? (
-                      <motion.span
-                        key="loading"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="auth-spinner"
-                      />
+                      <span className="auth-spinner" />
                     ) : (
-                      <motion.span
-                        key="text"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="auth-submit-label"
-                      >
-                        {mode === 'sign-in' ? 'Sign in' : 'Create account'}
+                      <>
+                        {mode === 'sign-in' ? 'Sign in' : 'Continue'}
                         <ArrowRight className="auth-submit-arrow" />
-                      </motion.span>
+                      </>
                     )}
-                  </AnimatePresence>
-                </motion.button>
+                  </button>
+                </form>
 
-                <motion.p
-                  className="auth-switch-line"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.5 }}
-                >
-                  {mode === 'sign-in' ? "Don't have an account? " : 'Already have an account? '}
+                <p className="auth-switch-line">
+                  {mode === 'sign-in' ? 'New to Board? ' : 'Already have an account? '}
                   <Link className="auth-switch" to={mode === 'sign-in' ? '/sign-up' : '/sign-in'}>
-                    {mode === 'sign-in' ? 'Sign up' : 'Sign in'}
+                    {mode === 'sign-in' ? 'Create an account' : 'Sign in'}
                   </Link>
-                </motion.p>
-              </form>
-            </div>
-          </div>
-        </motion.div>
+                </p>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="code"
+                initial={{ opacity: 0, x: 8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 8 }}
+                transition={{ duration: 0.25 }}
+              >
+                <button
+                  type="button"
+                  className="auth-back"
+                  onClick={() => {
+                    setStep('credentials')
+                    setError(null)
+                  }}
+                >
+                  <ArrowLeft />
+                  Back
+                </button>
+
+                <h1 className="auth-title">Check your inbox</h1>
+                <p className="auth-sub">
+                  We sent a 6-digit code to <strong>{email}</strong>. Enter it below to confirm your
+                  account.
+                </p>
+
+                <CodeInput
+                  value={code}
+                  onChange={setCode}
+                  onComplete={handleVerify}
+                  disabled={loading}
+                />
+
+                {error && <p className="auth-error auth-error-center">{error}</p>}
+
+                <button
+                  type="button"
+                  className="auth-submit"
+                  disabled={loading || code.length < 6}
+                  onClick={() => handleVerify(code)}
+                >
+                  {loading ? <span className="auth-spinner" /> : 'Verify & continue'}
+                </button>
+
+                <p className="auth-switch-line">
+                  Didn’t get it?{' '}
+                  {resendIn > 0 ? (
+                    <span className="auth-resend-wait">Resend in {resendIn}s</span>
+                  ) : (
+                    <button type="button" className="auth-switch" onClick={handleResend}>
+                      Resend code
+                    </button>
+                  )}
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <p className="auth-legal">Boards autosave to the cloud. One canvas, every device.</p>
       </motion.div>
     </div>
+  )
+}
+
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62Z"
+      />
+      <path
+        fill="#34A853"
+        d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3-2.33Z"
+      />
+      <path
+        fill="#EA4335"
+        d="M9 3.58c1.32 0 2.5.46 3.44 1.35l2.58-2.58C13.47.9 11.43 0 9 0A9 9 0 0 0 .96 4.95l3 2.33C4.68 5.16 6.66 3.58 9 3.58Z"
+      />
+    </svg>
   )
 }

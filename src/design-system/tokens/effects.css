@@ -1,0 +1,31 @@
+/* ==========================================================================
+   Tech.corp — Effects: shadows, motion, focus
+   The system is flat and ruled. Shadows are RARE and subtle; elevation is
+   usually communicated with a 1px black rule, not a blur.
+   ========================================================================== */
+
+:root {
+  /* Shadows — used sparingly (menus, dialogs, toasts only) */
+  --shadow-none: none;                                  /* @kind shadow */
+  --shadow-sm:  0 1px 0 rgba(20,20,22,0.04);            /* @kind shadow */
+  --shadow-pop: 0 2px 0 var(--ink-900);                 /* @kind shadow */ /* hard printed offset */
+  --shadow-md:  0 8px 24px -12px rgba(14,14,16,0.28);   /* @kind shadow */
+  --shadow-lg:  0 24px 60px -24px rgba(14,14,16,0.35);  /* @kind shadow */
+
+  /* Focus ring (keyboard) */
+  --focus-ring:       0 0 0 2px var(--paper), 0 0 0 4px var(--blue); /* @kind shadow */
+  --focus-ring-tight: 0 0 0 2px var(--blue);                         /* @kind shadow */
+
+  /* Motion — crisp and quick, no bounce. Straight, mechanical easing. */
+  --ease-out:    cubic-bezier(0.22, 1, 0.36, 1);   /* @kind other */
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);   /* @kind other */
+  --ease-linear: linear;                           /* @kind other */
+
+  --dur-1: 90ms;   /* @kind other */ /* taps / press */
+  --dur-2: 160ms;  /* @kind other */ /* default UI */
+  --dur-3: 260ms;  /* @kind other */ /* overlays */
+  --dur-4: 420ms;  /* @kind other */ /* large reveals */
+
+  /* Overlay scrim */
+  --scrim: rgba(14,14,16,0.55); /* @kind color */
+}

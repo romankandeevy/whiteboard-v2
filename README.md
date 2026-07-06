@@ -20,7 +20,7 @@ Built on top of [Excalidraw](https://github.com/excalidraw/excalidraw) for the d
 - [Excalidraw](https://github.com/excalidraw/excalidraw) for the canvas
 - [Supabase](https://supabase.com) — Postgres, sessions, email confirmation, and Google OAuth
 - [Framer Motion](https://www.framer.com/motion/) for animation, [React Router](https://reactrouter.com) for routing
-- Fonts: **Fraunces** (display) + **Hanken Grotesk** (body)
+- Design: the **Tech.corp** design system (`src/design-system/`) — cold white + charcoal + electric blue, **Rubik** display + **JetBrains Mono**
 - Deployed on [Vercel](https://vercel.com)
 
 ## Getting started

@@ -15,21 +15,6 @@ interface BoardListProps {
   onOpenBoard: (id: string) => void
 }
 
-const ACCENTS = [
-  { tint: '#ccfbf1', ink: '#0f766e' },
-  { tint: '#fef3c7', ink: '#b45309' },
-  { tint: '#ffe4e6', ink: '#be123c' },
-  { tint: '#e0e7ff', ink: '#4338ca' },
-  { tint: '#e0f2fe', ink: '#0369a1' },
-  { tint: '#ecfccb', ink: '#4d7c0f' },
-]
-
-function accentFor(id: string) {
-  let hash = 0
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0
-  return ACCENTS[hash % ACCENTS.length]
-}
-
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime()
   const min = Math.round(diff / 60000)
@@ -156,6 +141,7 @@ export default function BoardList({ onOpenBoard }: BoardListProps) {
       <main className="dash-main">
         <div className="dash-hero">
           <div>
+            <p className="eyebrow dash-eyebrow">Workspace</p>
             <h1 className="dash-title">Your boards</h1>
             <p className="dash-count">
               {boards === null
@@ -201,7 +187,6 @@ export default function BoardList({ onOpenBoard }: BoardListProps) {
         ) : (
           <ul className="dash-list">
             {filtered.map((board, i) => {
-              const accent = accentFor(board.id)
               return (
                 <motion.li
                   key={board.id}
@@ -216,13 +201,8 @@ export default function BoardList({ onOpenBoard }: BoardListProps) {
                     onClick={() => onOpenBoard(board.id)}
                     aria-label={`Open ${board.name}`}
                   >
-                    <span
-                      className="board-thumb"
-                      style={{
-                        background: `radial-gradient(120% 120% at 30% 20%, ${accent.tint} 0%, #ffffff 70%)`,
-                      }}
-                    >
-                      <span className="board-thumb-initial" style={{ color: accent.ink }}>
+                    <span className="board-thumb">
+                      <span className="board-thumb-initial">
                         {board.name.trim().charAt(0).toUpperCase() || 'B'}
                       </span>
                     </span>
@@ -349,17 +329,31 @@ function EmptyState({ hasBoards, onCreate }: { hasBoards: boolean; onCreate: () 
   return (
     <div className="dash-empty">
       <div className="dash-empty-art" aria-hidden="true">
-        <svg viewBox="0 0 120 90" fill="none">
-          <rect x="8" y="8" width="104" height="74" rx="8" stroke="var(--line)" strokeWidth="2" />
-          <path
-            d="M28 58c8-18 18-24 24-18s-2 20 6 22 20-14 28-20"
-            stroke="var(--teal)"
-            strokeWidth="2.5"
-            strokeLinecap="round"
+        <svg viewBox="0 0 160 110" fill="none">
+          <rect
+            x="1"
+            y="1"
+            width="158"
+            height="108"
+            fill="var(--paper)"
+            stroke="var(--ink-900)"
+            strokeWidth="2"
           />
-          <circle cx="30" cy="26" r="3" fill="var(--teal)" />
-          <circle cx="46" cy="26" r="3" fill="var(--line)" />
-          <circle cx="62" cy="26" r="3" fill="var(--line)" />
+          <g stroke="var(--border)" strokeWidth="1">
+            <line x1="40" y1="1" x2="40" y2="109" />
+            <line x1="80" y1="1" x2="80" y2="109" />
+            <line x1="120" y1="1" x2="120" y2="109" />
+            <line x1="1" y1="37" x2="159" y2="37" />
+            <line x1="1" y1="73" x2="159" y2="73" />
+          </g>
+          <polyline
+            points="16,86 52,86 52,58 92,58 92,34 132,34 132,20"
+            fill="none"
+            stroke="var(--blue)"
+            strokeWidth="3"
+          />
+          <circle cx="16" cy="86" r="3.5" fill="var(--ink-900)" />
+          <circle cx="132" cy="20" r="3.5" fill="var(--blue)" />
         </svg>
       </div>
       <h2 className="dash-empty-title">Your canvas is empty</h2>

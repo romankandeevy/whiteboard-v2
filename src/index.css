@@ -1,53 +1,15 @@
+/* ==========================================================================
+   App base — layers the Tech.corp Design System, then a few app defaults.
+   The look: cold white + charcoal + one electric blue, Rubik / JetBrains Mono,
+   squared corners, 1px black rules for elevation. See src/design-system/.
+   ========================================================================== */
+@import './design-system/styles.css';
+
 :root {
   color-scheme: light;
-
-  /* Type */
-  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
-  --font-body: 'Hanken Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-
-  /* Ink + paper */
-  --ink: #1c1917;
-  --ink-soft: #57534e;
-  --ink-faint: #a8a29e;
-  --paper: #faf9f7;
-  --paper-raised: #ffffff;
-  --line: #e7e5e4;
-  --line-soft: #f1f0ee;
-
-  /* Brand */
-  --teal: #0d9488;
-  --teal-dark: #0f766e;
-  --teal-darker: #115e59;
-  --teal-tint: #f0fdfa;
-  --teal-tint-2: #ccfbf1;
-  --danger: #c2410c;
-
-  /* Shape + depth */
-  --radius: 16px;
-  --radius-sm: 11px;
-  --radius-xs: 8px;
-  --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.06), 0 1px 3px rgba(28, 25, 23, 0.04);
-  --shadow-md: 0 6px 20px rgba(28, 25, 23, 0.08), 0 1px 3px rgba(28, 25, 23, 0.05);
-  --shadow-lg: 0 24px 60px rgba(28, 25, 23, 0.16), 0 4px 12px rgba(28, 25, 23, 0.06);
-  --ring: 0 0 0 3px rgba(13, 148, 136, 0.18);
 }
 
-* {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  margin: 0;
-}
-
-body {
-  font-family: var(--font-body);
-  color: var(--ink);
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-}
-
+/* base.css already sets the canvas background, Rubik body, and ink text. */
 #root {
   width: 100%;
   min-height: 100svh;
@@ -57,7 +19,10 @@ button {
   font-family: inherit;
 }
 
-::selection {
-  background: var(--teal-tint-2);
-  color: var(--teal-darker);
+/* Recurring mono eyebrow / overline used across the app surfaces. */
+.eyebrow {
+  font: var(--text-eyebrow);
+  letter-spacing: var(--tr-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
 }

@@ -1,0 +1,63 @@
+/* ==========================================================================
+   Tech.corp — Color tokens
+   Cold, two-tone minimalism: crisp COLD WHITE surfaces + a cool neutral
+   charcoal ink ramp (no warm/beige undertones anywhere), with a single
+   electric blue as the only accent. Functional red/green for status.
+   Balance target on any surface: white ~80 / charcoal ~18 / blue ~2.
+   ========================================================================== */
+
+:root {
+  /* --- Ink / charcoal ramp (cool neutral: near-black -> cool grey) ---- */
+  --ink-950: #0B0C0E;
+  --ink-900: #14161A;   /* primary ink — text, rules, fills */
+  --ink-800: #1C1F25;
+  --ink-700: #2A2E36;
+  --ink-600: #414651;
+  --ink-500: #5E6572;
+  --ink-400: #878E9B;
+  --ink-300: #AEB5C0;
+  --ink-200: #D3D8E0;
+  --ink-100: #E7EBF1;   /* subtle cool fill */
+
+  /* --- Cold white surfaces (bright -> recessed) ---------------------- */
+  --paper:  #FFFFFF;   /* brightest — cards */
+  --canvas: #F1F4F8;   /* page background — cool off-white */
+  --sink:   #E6EAF1;   /* recessed / hover fill */
+
+  /* --- Electric blue — the single accent ----------------------------- */
+  --blue-700: #0F2FD6;
+  --blue-600: #1A40F0;
+  --blue:     #1F4DFF;   /* the accent (500) */
+  --blue-400: #5478FF;
+  --blue-200: #B9C6FF;
+  --blue-050: #EAEEFF;
+
+  /* --- Functional status (validation & status only) ------------------ */
+  --danger:       #FF3B30;
+  --danger-tint:  #FFE4E2;
+  --success:      #17C964;
+  --success-tint: #DDFBEC;
+
+  /* ==================================================================
+     SEMANTIC ALIASES — reference these in components, not the raw ramp
+     ================================================================== */
+  --bg:              var(--canvas);  /* page */
+  --surface:         var(--paper);   /* cards */
+  --surface-sink:    var(--sink);    /* recessed */
+  --surface-inverse: var(--ink-900); /* dark panel */
+
+  --text:               var(--ink-900); /* primary */
+  --text-muted:         var(--ink-500); /* secondary */
+  --text-faint:         var(--ink-400); /* tertiary */
+  --text-inverse:       var(--paper);   /* on charcoal */
+  --text-inverse-muted: var(--ink-400); /* muted on charcoal */
+
+  --accent:      var(--blue);      /* emphasis — one thing per view */
+  --accent-tint: var(--blue-050);  /* blue wash / chart fill */
+
+  --border-strong: var(--ink-900); /* the signature 1px black rule */
+  --border:        var(--ink-200); /* hairline */
+  --rule:          var(--ink-200); /* structural divider */
+
+  --focus: var(--blue);            /* focus ring color */
+}

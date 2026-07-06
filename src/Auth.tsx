@@ -1,10 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mail, Lock, Eye, EyeOff, ArrowRight, ArrowLeft } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, ArrowRight, ArrowLeft, MailCheck } from 'lucide-react'
 import { supabase } from './lib/supabase'
-import { requestSignupCode, verifySignupCode, signInWithGoogle, authMessage } from './lib/auth'
-import CodeInput from './CodeInput'
+import { signInWithGoogle, resendConfirmation } from './lib/auth'
 
 interface AuthProps {
   mode: 'sign-in' | 'sign-up'
@@ -13,14 +12,13 @@ interface AuthProps {
 const RESEND_COOLDOWN = 45
 
 export default function Auth({ mode }: AuthProps) {
-  const [step, setStep] = useState<'credentials' | 'code'>('credentials')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
+  const [sentTo, setSentTo] = useState<string | null>(null)
   const [resendIn, setResendIn] = useState(0)
 
   useEffect(() => {
@@ -40,7 +38,7 @@ export default function Auth({ mode }: AuthProps) {
     }
   }
 
-  async function handleCredentials(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
     setLoading(true)
@@ -48,86 +46,110 @@ export default function Auth({ mode }: AuthProps) {
     if (mode === 'sign-in') {
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
       if (!signInError) return // session change navigates away
+      setLoading(false)
       const unconfirmed =
         (signInError as { code?: string }).code === 'email_not_confirmed' ||
         /not confirmed/i.test(signInError.message)
       if (unconfirmed) {
-        const res = await requestSignupCode(email, password)
-        setLoading(false)
-        if (res.ok) {
-          setStep('code')
-          setResendIn(RESEND_COOLDOWN)
-        } else {
-          setError(authMessage(res.code))
+        try {
+          await resendConfirmation(email)
+        } catch {
+          /* ignore — still show the notice */
         }
+        setSentTo(email)
+        setResendIn(RESEND_COOLDOWN)
         return
       }
-      setLoading(false)
-      setError(/invalid login/i.test(signInError.message) ? 'Wrong email or password.' : signInError.message)
+      setError(
+        /invalid login/i.test(signInError.message) ? 'Wrong email or password.' : signInError.message,
+      )
       return
     }
 
-    const res = await requestSignupCode(email, password)
-    setLoading(false)
-    if (res.ok) {
-      setCode('')
-      setStep('code')
-      setResendIn(RESEND_COOLDOWN)
-    } else {
-      setError(authMessage(res.code))
-    }
-  }
-
-  async function handleVerify(value: string) {
-    setError(null)
-    setLoading(true)
-    const res = await verifySignupCode(email, value)
-    if (!res.ok) {
-      setLoading(false)
-      setCode('')
-      setError(authMessage(res.code))
-      return
-    }
-    // Email confirmed — sign in with the credentials we already have.
-    const { error: signInError } = await supabase.auth.signInWithPassword({
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
+      options: { emailRedirectTo: window.location.origin },
     })
     setLoading(false)
-    if (signInError) setError('Verified! Please sign in with your password.')
-    // On success the session listener redirects.
+    if (signUpError) {
+      setError(signUpError.message)
+      return
+    }
+    // If confirmation is disabled, a session is returned and the listener redirects.
+    if (data.session) return
+    setSentTo(email)
+    setResendIn(RESEND_COOLDOWN)
   }
 
   async function handleResend() {
-    if (resendIn > 0) return
+    if (resendIn > 0 || !sentTo) return
     setError(null)
-    const res = await requestSignupCode(email, password)
-    if (res.ok) {
+    try {
+      await resendConfirmation(sentTo)
       setResendIn(RESEND_COOLDOWN)
-    } else {
-      setError(authMessage(res.code))
+    } catch {
+      setError('Couldn’t resend just now — try again in a moment.')
     }
   }
 
   return (
     <div className="auth">
-      <div className="auth-grid" aria-hidden="true" />
-      <div className="auth-glow" aria-hidden="true" />
+      <aside className="auth-brandside">
+        <svg className="auth-motif" viewBox="0 0 500 400" preserveAspectRatio="none" aria-hidden="true">
+          <g stroke="var(--ink-700)" strokeWidth="1">
+            {Array.from({ length: 14 }).map((_, i) => (
+              <line key={`v${i}`} x1={i * 40} y1="0" x2={i * 40} y2="400" />
+            ))}
+            {Array.from({ length: 11 }).map((_, i) => (
+              <line key={`h${i}`} x1="0" y1={i * 40} x2="500" y2={i * 40} />
+            ))}
+          </g>
+          <polyline
+            points="40,300 140,300 140,220 240,220 240,150 340,150 340,80 460,80"
+            fill="none"
+            stroke="var(--blue)"
+            strokeWidth="3"
+          />
+        </svg>
 
-      <motion.div
-        className="auth-panel"
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <div className="auth-brand">
+        <div className="auth-brandside-top">
           <span className="auth-mark">B</span>
           <span className="auth-wordmark">Board</span>
         </div>
 
-        <div className="auth-card">
+        <div>
+          <h2 className="auth-brand-head">
+            Think it.
+            <br />
+            Draw it.
+            <br />
+            Ship it.
+          </h2>
+          <p className="auth-brand-sub">
+            One infinite canvas for sketches, diagrams, and half-formed ideas — autosaved to the
+            cloud, open on every device.
+          </p>
+        </div>
+
+        <p className="auth-brandside-foot eyebrow">Autosave · Cloud sync · Every device</p>
+      </aside>
+
+      <div className="auth-formside">
+        <motion.div
+          className="auth-panel"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <div className="auth-brand">
+            <span className="auth-mark">B</span>
+            <span className="auth-wordmark">Board</span>
+          </div>
+
+          <div className="auth-card">
           <AnimatePresence mode="wait" initial={false}>
-            {step === 'credentials' ? (
+            {!sentTo ? (
               <motion.div
                 key="credentials"
                 initial={{ opacity: 0, x: -8 }}
@@ -135,6 +157,7 @@ export default function Auth({ mode }: AuthProps) {
                 exit={{ opacity: 0, x: -8 }}
                 transition={{ duration: 0.25 }}
               >
+                <p className="eyebrow auth-eyebrow">Board</p>
                 <h1 className="auth-title">
                   {mode === 'sign-in' ? 'Welcome back' : 'Create your account'}
                 </h1>
@@ -158,7 +181,7 @@ export default function Auth({ mode }: AuthProps) {
                   <span>or with email</span>
                 </div>
 
-                <form onSubmit={handleCredentials} className="auth-form">
+                <form onSubmit={handleSubmit} className="auth-form">
                   <label className="auth-field">
                     <Mail className="auth-field-icon" />
                     <input
@@ -200,7 +223,7 @@ export default function Auth({ mode }: AuthProps) {
                       <span className="auth-spinner" />
                     ) : (
                       <>
-                        {mode === 'sign-in' ? 'Sign in' : 'Continue'}
+                        {mode === 'sign-in' ? 'Sign in' : 'Create account'}
                         <ArrowRight className="auth-submit-arrow" />
                       </>
                     )}
@@ -216,7 +239,7 @@ export default function Auth({ mode }: AuthProps) {
               </motion.div>
             ) : (
               <motion.div
-                key="code"
+                key="sent"
                 initial={{ opacity: 0, x: 8 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 8 }}
@@ -226,7 +249,7 @@ export default function Auth({ mode }: AuthProps) {
                   type="button"
                   className="auth-back"
                   onClick={() => {
-                    setStep('credentials')
+                    setSentTo(null)
                     setError(null)
                   }}
                 >
@@ -234,29 +257,16 @@ export default function Auth({ mode }: AuthProps) {
                   Back
                 </button>
 
+                <div className="auth-sent-icon">
+                  <MailCheck />
+                </div>
                 <h1 className="auth-title">Check your inbox</h1>
                 <p className="auth-sub">
-                  We sent a 6-digit code to <strong>{email}</strong>. Enter it below to confirm your
-                  account.
+                  We sent a confirmation link to <strong>{sentTo}</strong>. Open it to activate your
+                  account — you’ll be signed in automatically.
                 </p>
 
-                <CodeInput
-                  value={code}
-                  onChange={setCode}
-                  onComplete={handleVerify}
-                  disabled={loading}
-                />
-
-                {error && <p className="auth-error auth-error-center">{error}</p>}
-
-                <button
-                  type="button"
-                  className="auth-submit"
-                  disabled={loading || code.length < 6}
-                  onClick={() => handleVerify(code)}
-                >
-                  {loading ? <span className="auth-spinner" /> : 'Verify & continue'}
-                </button>
+                {error && <p className="auth-error">{error}</p>}
 
                 <p className="auth-switch-line">
                   Didn’t get it?{' '}
@@ -264,7 +274,7 @@ export default function Auth({ mode }: AuthProps) {
                     <span className="auth-resend-wait">Resend in {resendIn}s</span>
                   ) : (
                     <button type="button" className="auth-switch" onClick={handleResend}>
-                      Resend code
+                      Resend link
                     </button>
                   )}
                 </p>
@@ -273,8 +283,9 @@ export default function Auth({ mode }: AuthProps) {
           </AnimatePresence>
         </div>
 
-        <p className="auth-legal">Boards autosave to the cloud. One canvas, every device.</p>
-      </motion.div>
+          <p className="auth-legal">Boards autosave to the cloud. One canvas, every device.</p>
+        </motion.div>
+      </div>
     </div>
   )
 }

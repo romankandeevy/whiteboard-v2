@@ -1,0 +1,70 @@
+/* ==========================================================================
+   Tech.corp — Typography tokens
+   One typeface: Rubik (rounded-corner geometric sans). Display is Rubik run
+   heavy (800-900); body is Rubik 400. Mono is JetBrains Mono for labels,
+   code, data read-outs and eyebrows. Leading is deliberately tight so text
+   reads as solid blocks.
+   ========================================================================== */
+
+:root {
+  /* --- Families ------------------------------------------------------ */
+  /* --font-display: Rubik run heavy (weight 800-900) for headlines & numerals */
+  --font-sans:    'Rubik', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; /* @kind font */
+  --font-display: 'Rubik', system-ui, sans-serif; /* @kind font */
+  --font-mono:    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; /* @kind font */
+
+  /* Legacy width helper — kept at 100% (Rubik has no width axis) */
+  --stretch-wide: 100%; /* @kind other */
+
+  /* --- Weights (the brand runs heavy) -------------------------------- */
+  --w-regular:  400; /* @kind font */
+  --w-medium:   500; /* @kind font */
+  --w-semibold: 600; /* @kind font */
+  --w-bold:     700; /* @kind font */
+  --w-extra:    800; /* @kind font */
+  --w-black:    900; /* @kind font */
+
+  /* --- Size scale (11 -> 112px) -------------------------------------- */
+  --t-3xs:  10px; /* @kind font */
+  --t-2xs:  11px; /* @kind font */
+  --t-xs:   12px; /* @kind font */
+  --t-sm:   14px; /* @kind font */
+  --t-base: 16px; /* @kind font */
+  --t-md:   18px; /* @kind font */
+  --t-lg:   22px; /* @kind font */
+  --t-xl:   28px; /* @kind font */
+  --t-2xl:  36px; /* @kind font */
+  --t-3xl:  48px; /* @kind font */
+  --t-4xl:  64px; /* @kind font */
+  --t-5xl:  84px; /* @kind font */
+  --t-6xl: 112px; /* @kind font */
+
+  /* --- Line heights (tight) ------------------------------------------ */
+  --lh-display: 0.92; /* @kind other */
+  --lh-tight:   1.05; /* @kind other */
+  --lh-snug:    1.2;  /* @kind other */
+  --lh-base:    1.35; /* @kind other */
+  --lh-normal:  1.5;  /* @kind other */
+  --lh-relaxed: 1.6;  /* @kind other */
+
+  /* --- Tracking ------------------------------------------------------ */
+  --tr-tight:  -0.02em; /* @kind other */
+  --tr-snug:   -0.01em; /* @kind other */
+  --tr-normal:  0em;    /* @kind other */
+  --tr-wide:    0.06em; /* @kind other */
+  --tr-caps:    0.1em;  /* @kind other */
+
+  /* --- Role shorthands (font:) --------------------------------------- */
+  /* Display roles run heavy & tight; add letter-spacing:var(--tr-tight) at call site. */
+  --text-hero:    var(--w-bold) var(--t-6xl)/var(--lh-display) var(--font-display); /* @kind font */
+  --text-display: var(--w-bold) var(--t-4xl)/var(--lh-display) var(--font-display); /* @kind font */
+  --text-h1:      var(--w-bold) var(--t-3xl)/var(--lh-tight)   var(--font-display); /* @kind font */
+  --text-h2:      var(--w-bold) var(--t-2xl)/var(--lh-tight)   var(--font-display); /* @kind font */
+  --text-h3:      var(--w-bold)  var(--t-xl)/var(--lh-tight)  var(--font-sans); /* @kind font */
+  --text-h4:      var(--w-bold)  var(--t-lg)/var(--lh-snug)   var(--font-sans); /* @kind font */
+  --text-body:    var(--w-regular) var(--t-base)/var(--lh-base) var(--font-sans); /* @kind font */
+  --text-small:   var(--w-regular) var(--t-sm)/var(--lh-base)   var(--font-sans); /* @kind font */
+  --text-mono:    var(--w-medium)  var(--t-sm)/var(--lh-base)   var(--font-mono); /* @kind font */
+  /* --text-eyebrow: add uppercase + letter-spacing:var(--tr-caps) at call site */
+  --text-eyebrow: var(--w-bold)    var(--t-2xs)/1 var(--font-mono); /* @kind font */
+}

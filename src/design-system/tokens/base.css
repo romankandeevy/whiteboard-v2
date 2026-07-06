@@ -1,0 +1,55 @@
+/* ==========================================================================
+   Tech.corp — Base / document defaults
+   Establishes the ivory paper, charcoal ink, tight leading and sensible
+   resets. Components inject their own styles; this only sets the ground.
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--t-base);
+  line-height: var(--lh-base);
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6, p, figure { margin: 0; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--blue-600); }
+
+img, svg, video { max-width: 100%; display: block; }
+
+hr {
+  border: 0;
+  border-top: var(--line) solid var(--border-strong);
+  margin: var(--sp-6) 0;
+}
+
+::selection { background: var(--ink-900); color: var(--canvas); }
+
+:focus-visible { outline: var(--line-2) solid var(--focus); outline-offset: 2px; }
+
+/* Mono eyebrow / overline — recurring label treatment */
+.tc-eyebrow {
+  font: var(--text-eyebrow);
+  letter-spacing: var(--tr-caps);
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

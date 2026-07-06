@@ -1,0 +1,12 @@
+/* ==========================================================================
+   Tech.corp Design System — project entry point
+   Vendored from "Tech.corp Design System". Consumers import THIS one file.
+   Fonts (Rubik + JetBrains Mono) are loaded via <link> in index.html rather
+   than @import here, so this file is imports of the token layer only.
+   ========================================================================== */
+
+@import './tokens/colors.css';
+@import './tokens/typography.css';
+@import './tokens/spacing.css';
+@import './tokens/effects.css';
+@import './tokens/base.css';

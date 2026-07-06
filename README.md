@@ -2,11 +2,11 @@
 
 A minimal, fast whiteboard app for sketching ideas. Sign in, create boards, and draw — everything autosaves to the cloud so you can pick up where you left off from any device.
 
-Built on top of [Excalidraw](https://github.com/excalidraw/excalidraw) for the drawing canvas, with [Supabase](https://supabase.com) for storage and sessions. Email sign-up uses a **custom 6-digit code flow** delivered through [Resend](https://resend.com) (not Supabase's built-in mailer), plus **Google** one-click sign-in.
+Built on top of [Excalidraw](https://github.com/excalidraw/excalidraw) for the drawing canvas, with [Supabase](https://supabase.com) handling auth and per-user board storage. Sign-up uses Supabase's email confirmation (delivered through your own SMTP so it's reliable and needs no domain), plus **Google** one-click sign-in.
 
 ## Features
 
-- **Custom email verification** — sign-up sends a 6-digit code from our own edge function via Resend, then confirms the account. No waiting on Supabase's rate-limited built-in email.
+- **Email confirmation** — Supabase sends a confirmation link on sign-up; clicking it activates the account and signs you in. Delivered via custom SMTP (e.g. Gmail) so it doesn't rely on Supabase's rate-limited default mailer.
 - **Google sign-in** — one-click OAuth.
 - **A real board dashboard** — searchable grid, create-and-name flow, inline rename, per-board thumbnails, relative timestamps, and an empty state.
 - **Autosave** — changes are debounced and saved to Postgres as you draw.
@@ -18,27 +18,10 @@ Built on top of [Excalidraw](https://github.com/excalidraw/excalidraw) for the d
 
 - [React 19](https://react.dev) + [TypeScript](https://www.typescriptlang.org) + [Vite](https://vite.dev)
 - [Excalidraw](https://github.com/excalidraw/excalidraw) for the canvas
-- [Supabase](https://supabase.com) — Postgres, sessions, Google OAuth, and Edge Functions
-- [Resend](https://resend.com) for transactional email
+- [Supabase](https://supabase.com) — Postgres, sessions, email confirmation, and Google OAuth
 - [Framer Motion](https://www.framer.com/motion/) for animation, [React Router](https://reactrouter.com) for routing
 - Fonts: **Fraunces** (display) + **Hanken Grotesk** (body)
 - Deployed on [Vercel](https://vercel.com)
-
-## How email sign-up works
-
-```
-Sign up (email + password)
-  └─ POST /functions/v1/auth-signup   ── creates an UNCONFIRMED user, stores a
-                                          hashed 6-digit code, emails it via Resend
-Enter code
-  └─ POST /functions/v1/auth-verify   ── checks the code, marks the email confirmed
-  └─ signInWithPassword               ── logs you in
-```
-
-Codes live in the `email_verifications` table (10-minute expiry, max 5 attempts, 45-second
-resend cooldown). The table is locked down with RLS — only the edge functions (service role)
-can touch it. Because accounts are created **unconfirmed**, keep **“Confirm email” ON** in
-Supabase Auth so nobody can bypass the code by signing in directly.
 
 ## Getting started
 
@@ -46,7 +29,7 @@ Supabase Auth so nobody can bypass the code by signing in directly.
 
 - Node.js 20+
 - A free [Supabase](https://supabase.com) project
-- A free [Resend](https://resend.com) account (for verification emails)
+- An email account you can send SMTP through (Gmail works and needs no domain)
 - A [Google Cloud](https://console.cloud.google.com) project (for Google sign-in)
 
 ### 1. Clone and install
@@ -59,36 +42,33 @@ npm install
 
 ### 2. Database
 
-In the Supabase SQL editor, run [`supabase/schema.sql`](./supabase/schema.sql) (boards table + RLS)
-and [`supabase/verification.sql`](./supabase/verification.sql) (the `email_verifications` table and
-the `auth_user_status` lookup function).
+In the Supabase SQL editor, run [`supabase/schema.sql`](./supabase/schema.sql). It creates the
+`boards` table with row-level security so each user only sees their own boards.
 
-### 3. Edge Functions
+### 3. Email delivery (custom SMTP)
 
-Deploy the two auth functions and give them a Resend key:
+Supabase's built-in mailer is rate-limited (~a couple of emails per hour) and not meant for real
+sign-ups. Point Supabase at your own SMTP instead — with Gmail this takes ~5 minutes and needs no
+domain:
 
-```bash
-supabase functions deploy auth-signup --no-verify-jwt
-supabase functions deploy auth-verify --no-verify-jwt
-supabase secrets set RESEND_API_KEY=re_xxxxxxxx
-# optional — defaults to "Board <onboarding@resend.dev>"
-supabase secrets set VERIFY_EMAIL_FROM="Board <hello@yourdomain.com>"
-```
+1. On your Google account, enable **2-Step Verification**, then create an **App password**
+   (Google Account → Security → App passwords). You'll get a 16-character password.
+2. In Supabase: **Authentication → Emails → SMTP Settings → Enable custom SMTP**:
+   - Host `smtp.gmail.com`, Port `465`
+   - Username: your full Gmail address · Password: the app password
+   - Sender email: your Gmail address · Sender name: `Board`
+3. **Authentication → Providers → Email** → keep **Confirm email** ON.
+4. **Authentication → URL Configuration** → add `http://localhost:5173` and your production origin
+   to the redirect URLs.
 
-`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically — you don't set those.
-
-> **Resend note:** with no verified domain, Resend only delivers to the address that owns the
-> Resend account (fine for testing). To email anyone, verify a domain in Resend and point
-> `VERIFY_EMAIL_FROM` at it.
+Gmail sends to any recipient at ~500 emails/day — plenty for a small app.
 
 ### 4. Google sign-in
 
 1. In **Google Cloud Console → Credentials**, create an **OAuth client ID** (Web application).
-2. Add the redirect URI Supabase shows you (**Auth → Providers → Google**), typically
+2. Add the redirect URI Supabase shows you under **Auth → Providers → Google**, typically
    `https://YOUR_PROJECT.supabase.co/auth/v1/callback`.
-3. Paste the client ID + secret into Supabase’s Google provider and enable it.
-4. In **Auth → URL Configuration**, add your redirect URLs: `http://localhost:5173` and your
-   production origin.
+3. Paste the client ID + secret into Supabase's Google provider and enable it.
 
 ### 5. Environment variables
 
@@ -122,26 +102,21 @@ npm run dev   # http://localhost:5173
 
 Deploys on [Vercel](https://vercel.com) (see `vercel.json` for the SPA rewrite). Add
 `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the Vercel project settings, and make sure
-your Vercel origin is listed in Supabase’s Auth redirect URLs.
+your Vercel origin is listed in Supabase's Auth redirect URLs.
 
 ## Project structure
 
 ```
 src/
-  Auth.tsx         # Sign-in / sign-up + 6-digit code step + Google button
-  CodeInput.tsx    # 6-digit one-time-code input
+  Auth.tsx         # Sign-in / sign-up + confirmation-sent screen + Google button
   BoardList.tsx    # Board dashboard (search, create, rename, delete)
   BoardView.tsx    # Lazy-loaded wrapper around the canvas
   Board.tsx        # Excalidraw canvas + autosave logic
   lib/
     supabase.ts    # Supabase client
     useAuth.ts     # Auth session hook
-    auth.ts        # Custom sign-up / verify / Google helpers
+    auth.ts        # Google sign-in + resend-confirmation helpers
     boards.ts      # CRUD helpers for boards
 supabase/
   schema.sql       # boards table + RLS policies
-  verification.sql # email_verifications table + auth_user_status()
-  functions/
-    auth-signup/   # create unconfirmed user + email a code
-    auth-verify/   # check code + confirm email
 ```
